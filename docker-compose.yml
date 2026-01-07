@@ -1,0 +1,37 @@
+version: '3.8'
+
+services:
+  indexer:
+    build: .
+    container_name: solana-indexer
+    env_file:
+      - .env
+    ports:
+      - "${SERVER_PORT:-8080}:8080"
+    depends_on:
+      - postgres
+    restart: unless-stopped
+    networks:
+      - indexer-network
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: solana-postgres
+    environment:
+      POSTGRES_DB: solana_indexer
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - indexer-network
+    restart: unless-stopped
+
+volumes:
+  postgres-data:
+
+networks:
+  indexer-network:
+    driver: bridge

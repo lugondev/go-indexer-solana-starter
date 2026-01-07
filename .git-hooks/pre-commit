@@ -1,0 +1,30 @@
+#!/bin/bash
+set -e
+
+echo "Running pre-commit checks..."
+
+echo "1. Formatting code..."
+if ! gofmt -l . | grep -v vendor | grep .; then
+    echo "✓ Code formatting passed"
+else
+    echo "✗ Code formatting failed. Run 'make fmt' to fix."
+    exit 1
+fi
+
+echo "2. Running go vet..."
+if go vet ./...; then
+    echo "✓ go vet passed"
+else
+    echo "✗ go vet failed"
+    exit 1
+fi
+
+echo "3. Running tests..."
+if go test -race -short ./...; then
+    echo "✓ Tests passed"
+else
+    echo "✗ Tests failed"
+    exit 1
+fi
+
+echo "All pre-commit checks passed!"
