@@ -48,6 +48,18 @@ func (p *EventProcessor) ProcessEvent(ctx context.Context, signature string, slo
 		return p.processConfigUpdated(ctx, baseEvent, eventData)
 	case models.EventTypeNftMinted:
 		return p.processNftMinted(ctx, baseEvent, eventData)
+	case models.EventTypeCounterInitialized:
+		return p.processCounterInitialized(ctx, baseEvent, eventData)
+	case models.EventTypeCounterIncremented:
+		return p.processCounterIncremented(ctx, baseEvent, eventData)
+	case models.EventTypeCounterDecremented:
+		return p.processCounterDecremented(ctx, baseEvent, eventData)
+	case models.EventTypeCounterAdded:
+		return p.processCounterAdded(ctx, baseEvent, eventData)
+	case models.EventTypeCounterReset:
+		return p.processCounterReset(ctx, baseEvent, eventData)
+	case models.EventTypeCounterPaymentReceived:
+		return p.processCounterPaymentReceived(ctx, baseEvent, eventData)
 	default:
 		log.Printf("Unknown event type: %s", eventType)
 		return nil
@@ -92,6 +104,42 @@ func (p *EventProcessor) processConfigUpdated(ctx context.Context, base models.B
 
 func (p *EventProcessor) processNftMinted(ctx context.Context, base models.BaseEvent, data interface{}) error {
 	event := data.(models.NftMintedEvent)
+	event.BaseEvent = base
+	return p.repo.SaveEvent(ctx, &event)
+}
+
+func (p *EventProcessor) processCounterInitialized(ctx context.Context, base models.BaseEvent, data interface{}) error {
+	event := data.(models.CounterInitializedEvent)
+	event.BaseEvent = base
+	return p.repo.SaveEvent(ctx, &event)
+}
+
+func (p *EventProcessor) processCounterIncremented(ctx context.Context, base models.BaseEvent, data interface{}) error {
+	event := data.(models.CounterIncrementedEvent)
+	event.BaseEvent = base
+	return p.repo.SaveEvent(ctx, &event)
+}
+
+func (p *EventProcessor) processCounterDecremented(ctx context.Context, base models.BaseEvent, data interface{}) error {
+	event := data.(models.CounterDecrementedEvent)
+	event.BaseEvent = base
+	return p.repo.SaveEvent(ctx, &event)
+}
+
+func (p *EventProcessor) processCounterAdded(ctx context.Context, base models.BaseEvent, data interface{}) error {
+	event := data.(models.CounterAddedEvent)
+	event.BaseEvent = base
+	return p.repo.SaveEvent(ctx, &event)
+}
+
+func (p *EventProcessor) processCounterReset(ctx context.Context, base models.BaseEvent, data interface{}) error {
+	event := data.(models.CounterResetEvent)
+	event.BaseEvent = base
+	return p.repo.SaveEvent(ctx, &event)
+}
+
+func (p *EventProcessor) processCounterPaymentReceived(ctx context.Context, base models.BaseEvent, data interface{}) error {
+	event := data.(models.CounterPaymentReceivedEvent)
 	event.BaseEvent = base
 	return p.repo.SaveEvent(ctx, &event)
 }

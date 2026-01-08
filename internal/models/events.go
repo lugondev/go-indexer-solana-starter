@@ -29,6 +29,13 @@ const (
 	EventTypeNftListingCancelled  EventType = "NftListingCancelledEvent"
 	EventTypeNftOfferCreated      EventType = "NftOfferCreatedEvent"
 	EventTypeNftOfferAccepted     EventType = "NftOfferAcceptedEvent"
+
+	EventTypeCounterInitialized     EventType = "CounterInitializedEvent"
+	EventTypeCounterIncremented     EventType = "CounterIncrementedEvent"
+	EventTypeCounterDecremented     EventType = "CounterDecrementedEvent"
+	EventTypeCounterAdded           EventType = "CounterAddedEvent"
+	EventTypeCounterReset           EventType = "CounterResetEvent"
+	EventTypeCounterPaymentReceived EventType = "CounterPaymentReceivedEvent"
 )
 
 type BaseEvent struct {
@@ -98,4 +105,49 @@ type NftMintedEvent struct {
 	Name       string           `bson:"name" json:"name"`
 	Uri        string           `bson:"uri" json:"uri"`
 	Timestamp  int64            `bson:"timestamp" json:"timestamp"`
+}
+
+type CounterInitializedEvent struct {
+	BaseEvent    `bson:",inline"`
+	Counter      solana.PublicKey `bson:"counter" json:"counter"`
+	Authority    solana.PublicKey `bson:"authority" json:"authority"`
+	InitialCount uint64           `bson:"initial_count" json:"initial_count"`
+}
+
+type CounterIncrementedEvent struct {
+	BaseEvent `bson:",inline"`
+	Counter   solana.PublicKey `bson:"counter" json:"counter"`
+	OldValue  uint64           `bson:"old_value" json:"old_value"`
+	NewValue  uint64           `bson:"new_value" json:"new_value"`
+}
+
+type CounterDecrementedEvent struct {
+	BaseEvent `bson:",inline"`
+	Counter   solana.PublicKey `bson:"counter" json:"counter"`
+	OldValue  uint64           `bson:"old_value" json:"old_value"`
+	NewValue  uint64           `bson:"new_value" json:"new_value"`
+}
+
+type CounterAddedEvent struct {
+	BaseEvent  `bson:",inline"`
+	Counter    solana.PublicKey `bson:"counter" json:"counter"`
+	OldValue   uint64           `bson:"old_value" json:"old_value"`
+	AddedValue uint64           `bson:"added_value" json:"added_value"`
+	NewValue   uint64           `bson:"new_value" json:"new_value"`
+}
+
+type CounterResetEvent struct {
+	BaseEvent `bson:",inline"`
+	Counter   solana.PublicKey `bson:"counter" json:"counter"`
+	Authority solana.PublicKey `bson:"authority" json:"authority"`
+	OldValue  uint64           `bson:"old_value" json:"old_value"`
+}
+
+type CounterPaymentReceivedEvent struct {
+	BaseEvent    `bson:",inline"`
+	Counter      solana.PublicKey `bson:"counter" json:"counter"`
+	Payer        solana.PublicKey `bson:"payer" json:"payer"`
+	FeeCollector solana.PublicKey `bson:"fee_collector" json:"fee_collector"`
+	Payment      uint64           `bson:"payment" json:"payment"`
+	NewCount     uint64           `bson:"new_count" json:"new_count"`
 }

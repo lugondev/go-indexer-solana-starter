@@ -1,6 +1,6 @@
 # Quick Start Guide
 
-This guide will help you get the Solana Starter Program indexer running in 5 minutes.
+This guide will help you get the Solana Programs indexer running in 5 minutes.
 
 ## Prerequisites
 
@@ -32,7 +32,8 @@ cp .env.example .env
 ```
 
 Edit `.env` if needed (defaults are fine for devnet):
-- `STARTER_PROGRAM_ID` - Your deployed program ID
+- `STARTER_PROGRAM_ID` - Your deployed Starter Program ID
+- `COUNTER_PROGRAM_ID` - Your deployed Counter Program ID
 - `DATABASE_URL` - MongoDB connection string
 
 ### 3. Run the Indexer
@@ -47,9 +48,12 @@ go run cmd/indexer/main.go
 
 You should see:
 ```
-2026/01/08 15:30:45 starting indexer for program gARh1g6reuvsAHB7DXqiuYzzyiJeoiJmtmCpV8Y5uWC from slot 0
-2026/01/08 15:30:50 processing 15 signatures
-2026/01/08 15:30:51 processed event TokensMintedEvent at slot 123456
+2026/01/08 15:30:45 starting indexer for Starter Program gARh1g6reuvsAHB7DXqiuYzzyiJeoiJmtmCpV8Y5uWC from slot 0
+2026/01/08 15:30:45 starting indexer for Counter Program CounzVsCGF4VzNkAwePKC9mXr6YWiFYF4kLW6YdV8Cc from slot 0
+2026/01/08 15:30:50 processing 15 starter program signatures
+2026/01/08 15:30:51 processed starter event TokensMintedEvent at slot 123456
+2026/01/08 15:30:52 processing 3 counter program signatures
+2026/01/08 15:30:52 processed counter event CounterIncrementedEvent at slot 123457
 ```
 
 ## Option 2: Docker (Recommended for Production)
@@ -92,18 +96,36 @@ db.events.find().sort({block_time: -1}).limit(5).pretty()
 
 ## Query Examples
 
-### Find token mint events
-```javascript
-db.events.find({ event_type: "TokensMintedEvent" }).pretty()
-```
+### Starter Program Events
 
-### Find events by user
 ```javascript
+// Find token mint events
+db.events.find({ event_type: "TokensMintedEvent" }).pretty()
+
+// Find events by user
 db.events.find({ "user": "YOUR_PUBKEY_HERE" })
 ```
 
-### Get event statistics
+### Counter Program Events
+
 ```javascript
+// Find all counter increments
+db.events.find({ event_type: "CounterIncrementedEvent" }).pretty()
+
+// Find payment events
+db.events.find({ event_type: "CounterPaymentReceivedEvent" }).sort({ payment: -1 })
+
+// Track counter value changes
+db.events.find({ 
+  counter: "COUNTER_PUBKEY_HERE",
+  event_type: /Counter(Incremented|Decremented|Added)/
+}).sort({ block_time: 1 })
+```
+
+### Statistics
+
+```javascript
+// Get event statistics
 db.events.aggregate([
   { $group: { _id: "$event_type", count: { $sum: 1 } } },
   { $sort: { count: -1 } }
@@ -118,12 +140,43 @@ db.events.aggregate([
 
 ### "No signatures found"
 - Program might not have any transactions yet
-- Verify STARTER_PROGRAM_ID is correct
+- Verify STARTER_PROGRAM_ID and COUNTER_PROGRAM_ID are correct
 - Check RPC endpoint is accessible
+- Try generating transactions with `anchor test`
 
 ### "Failed to decode event"
-- Make sure you're using the correct program ID
-- Check that the IDL matches deployed program version
+- Make sure you're using the correct program IDs
+- For Starter Program: Check IDL matches deployed version
+- For Counter Program: Check log message formats match parser regex
+
+### "Counter events not appearing"
+- Counter Program uses log parsing, not Anchor events
+- Verify "Program log:" messages are in transaction logs
+- Check regex patterns in `internal/decoder/counter_parser.go`
+- Enable debug logging to see parsed log messages
+
+## Testing with Local Programs
+
+### Generate Test Transactions
+
+```bash
+# Terminal 1: Start local validator
+solana-test-validator
+
+# Terminal 2: Deploy and test programs
+cd ../starter_program
+anchor build
+anchor deploy
+anchor test --skip-local-validator
+
+# Terminal 3: Run indexer (in another terminal)
+cd ../go_indexer
+./indexer
+
+# Terminal 4: Watch events appear
+mongosh solana_indexer
+db.events.find().sort({block_time: -1}).limit(10).pretty()
+```
 
 ## Next Steps
 
