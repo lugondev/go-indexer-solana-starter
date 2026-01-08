@@ -1,186 +1,438 @@
-# Go Indexer Solana Starter
+# Go Indexer for Solana Starter Program
 
-A high-performance Solana blockchain indexer written in Go.
+A high-performance Solana blockchain event indexer built specifically for the [Starter Program](../starter_program/README.md). This indexer monitors and stores all events emitted by the Starter Program smart contracts into MongoDB or PostgreSQL for easy querying and analysis.
 
-## Features
+## 🚀 Features
 
-- 🚀 High-performance concurrent block processing
-- 🔄 Automatic retry and error handling
-- 📊 Real-time slot tracking
-- 🛡️ Graceful shutdown handling
-- 🧪 Comprehensive test coverage
-- 🐳 Docker support
+- **Event-Driven Architecture**: Indexes all 20+ event types from Starter Program
+- **Real-time Processing**: Polls Solana RPC for new transactions and processes events immediately
+- **Multiple Database Support**: MongoDB and PostgreSQL (with migrations)
+- **Anchor Event Decoding**: Automatically decodes Anchor framework events with discriminators
+- **Concurrent Processing**: Configurable batch size and concurrency for optimal performance
+- **Type-Safe Models**: Strongly-typed event models with Borsh serialization
+- **Production Ready**: Graceful shutdown, error handling, and comprehensive logging
 
-## Project Structure
+## 📋 Indexed Events
+
+The indexer tracks all events from the Starter Program:
+
+### Token Events
+- `TokensMintedEvent` - SPL token minting
+- `TokensTransferredEvent` - Token transfers
+- `TokensBurnedEvent` - Token burning
+- `DelegateApprovedEvent` - Delegate approval
+- `DelegateRevokedEvent` - Delegate revocation
+- `TokenAccountClosedEvent` - Account closure
+- `TokenAccountFrozenEvent` - Account freeze
+- `TokenAccountThawedEvent` - Account thaw
+
+### User Events
+- `UserAccountCreatedEvent` - New user registration
+- `UserAccountUpdatedEvent` - User profile updates
+- `UserAccountClosedEvent` - Account deletion
+
+### Config Events
+- `ConfigUpdatedEvent` - Program configuration changes
+- `ProgramPausedEvent` - Program pause/unpause
+
+### NFT Events
+- `NftCollectionCreatedEvent` - NFT collection creation
+- `NftMintedEvent` - NFT minting
+- `NftListedEvent` - NFT marketplace listing
+- `NftSoldEvent` - NFT sale
+- `NftListingCancelledEvent` - Listing cancellation
+- `NftOfferCreatedEvent` - Offer creation
+- `NftOfferAcceptedEvent` - Offer acceptance
+
+## 🏗️ Project Structure
 
 ```
-.
+go_indexer/
 ├── cmd/
-│   └── indexer/          # Main application entry point
+│   └── indexer/              # Main application entry point
 ├── internal/
-│   ├── config/           # Configuration management
-│   ├── indexer/          # Core indexer logic
-│   ├── repository/       # Data access layer
-│   └── handler/          # HTTP handlers
+│   ├── config/               # Configuration management
+│   ├── decoder/              # Anchor event decoder
+│   ├── indexer/              # Core indexer logic
+│   ├── models/               # Event models
+│   ├── processor/            # Event processor
+│   └── repository/           # Database repositories
+│       ├── repository.go     # Repository interface
+│       ├── mongo.go          # MongoDB implementation
+│       └── postgres.go       # PostgreSQL implementation
 ├── pkg/
-│   └── solana/           # Solana client library
-├── api/                  # API definitions
-├── configs/              # Configuration files
-└── docs/                 # Documentation
+│   └── solana/               # Solana RPC client
+├── idl/                      # Anchor IDL files
+├── tools/                    # Code generation tools
+└── .env.example              # Environment variables template
 ```
 
-## Prerequisites
+## 🛠️ Prerequisites
 
-- Go 1.21 or higher
-- PostgreSQL (optional, for data persistence)
-- Docker (optional, for containerized deployment)
+- **Go 1.24+** (required for latest dependencies)
+- **MongoDB 4.4+** or **PostgreSQL 12+**
+- **Solana Devnet/Mainnet access** (RPC endpoint)
+- **Starter Program deployed** (see [starter_program](../starter_program/))
 
-## Installation
+## 📦 Installation
 
-1. Clone the repository:
+### 1. Clone and Setup
+
 ```bash
-git clone https://github.com/lugondev/go-indexer-solana-starter.git
-cd go-indexer-solana-starter
+cd go_indexer
+cp .env.example .env
 ```
 
-2. Install dependencies:
+### 2. Configure Environment
+
+Edit `.env` with your settings:
+
+```env
+# Solana Configuration
+SOLANA_RPC_URL=https://api.devnet.solana.com
+SOLANA_WS_URL=wss://api.devnet.solana.com
+
+# Program IDs (from your deployed programs)
+STARTER_PROGRAM_ID=gARh1g6reuvsAHB7DXqiuYzzyiJeoiJmtmCpV8Y5uWC
+COUNTER_PROGRAM_ID=CounzVsCGF4VzNkAwePKC9mXr6YWiFYF4kLW6YdV8Cc
+
+# Indexer Settings
+START_SLOT=0                  # Set to current slot to index from now
+POLL_INTERVAL_MS=5000         # Poll every 5 seconds
+BATCH_SIZE=20                 # Process 20 transactions per batch
+MAX_CONCURRENCY=5             # 5 concurrent workers
+
+# Database (choose one)
+DATABASE_TYPE=mongodb
+DATABASE_URL=mongodb://localhost:27017
+DATABASE_NAME=solana_indexer
+
+# Or PostgreSQL
+# DATABASE_TYPE=postgres
+# DATABASE_URL=postgres://user:pass@localhost:5432/dbname?sslmode=disable
+# DATABASE_NAME=solana_indexer
+
+# Server
+SERVER_PORT=8080
+LOG_LEVEL=info
+```
+
+### 3. Install Dependencies
+
 ```bash
 go mod download
 ```
 
-3. Copy environment variables:
+### 4. Setup Database
+
+#### MongoDB (Recommended)
+
 ```bash
-cp .env.example .env
+# Install MongoDB
+brew install mongodb-community@7.0  # macOS
+# or
+sudo apt-get install mongodb         # Linux
+
+# Start MongoDB
+brew services start mongodb-community@7.0  # macOS
+# or
+sudo systemctl start mongodb               # Linux
+
+# Verify connection
+mongosh --eval "db.version()"
 ```
 
-4. Update `.env` with your configuration
-
-## Usage
-
-### Running Locally
+#### PostgreSQL (Alternative)
 
 ```bash
-# Build the binary
-make build
+# Install PostgreSQL
+brew install postgresql@15    # macOS
+# or
+sudo apt-get install postgresql  # Linux
 
-# Run the indexer
-make run
+# Start PostgreSQL
+brew services start postgresql@15  # macOS
+# or
+sudo systemctl start postgresql    # Linux
 
-# Or run directly with go
+# Create database
+createdb solana_indexer
+
+# Run migrations (automatic on first start)
+```
+
+## 🚀 Usage
+
+### Running the Indexer
+
+```bash
+# Build
+go build -o indexer cmd/indexer/main.go
+
+# Run
+./indexer
+
+# Or run directly
 go run cmd/indexer/main.go
 ```
 
-### Using Docker
+### Output Example
 
-```bash
-# Build Docker image
-make docker-build
-
-# Run container
-make docker-run
+```
+2026/01/08 15:30:45 starting indexer for program gARh1g6reuvsAHB7DXqiuYzzyiJeoiJmtmCpV8Y5uWC from slot 0
+2026/01/08 15:30:50 processing 15 signatures
+2026/01/08 15:30:51 processed event TokensMintedEvent at slot 123456
+2026/01/08 15:30:51 processed event UserAccountCreatedEvent at slot 123457
+2026/01/08 15:30:51 processed event NftMintedEvent at slot 123458
 ```
 
-## Configuration
+## 📊 Querying Events
 
-Configure the indexer using environment variables:
+### MongoDB Queries
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `SOLANA_RPC_URL` | Solana RPC endpoint | `https://api.mainnet-beta.solana.com` |
-| `SOLANA_WS_URL` | Solana WebSocket endpoint | `wss://api.mainnet-beta.solana.com` |
-| `START_SLOT` | Starting slot number | `0` |
-| `POLL_INTERVAL_MS` | Polling interval in milliseconds | `1000` |
-| `BATCH_SIZE` | Number of blocks per batch | `10` |
-| `MAX_CONCURRENCY` | Maximum concurrent workers | `5` |
-| `DATABASE_URL` | PostgreSQL connection string | `postgres://localhost:5432/solana_indexer` |
-| `SERVER_PORT` | HTTP server port | `8080` |
-| `LOG_LEVEL` | Logging level | `info` |
+```javascript
+// Connect to MongoDB
+mongosh solana_indexer
 
-## Development
+// Find all token mint events
+db.events.find({ event_type: "TokensMintedEvent" })
+
+// Find events by user
+db.events.find({ "user": "USER_PUBKEY_HERE" })
+
+// Find recent events (last 24 hours)
+db.events.find({
+  block_time: { $gte: new Date(Date.now() - 24*60*60*1000) }
+}).sort({ block_time: -1 })
+
+// Aggregate events by type
+db.events.aggregate([
+  { $group: { _id: "$event_type", count: { $sum: 1 } } }
+])
+
+// Find NFT sales above 1 SOL
+db.events.find({
+  event_type: "NftSoldEvent",
+  price: { $gte: 1000000000 }  // 1 SOL in lamports
+})
+```
+
+### PostgreSQL Queries
+
+```sql
+-- Connect to PostgreSQL
+psql -d solana_indexer
+
+-- Find all token mint events
+SELECT * FROM events 
+WHERE event_type = 'TokensMintedEvent';
+
+-- Find events by signature
+SELECT * FROM events 
+WHERE signature = 'SIGNATURE_HERE';
+
+-- Find recent events (last 24 hours)
+SELECT * FROM events 
+WHERE block_time > NOW() - INTERVAL '24 hours'
+ORDER BY block_time DESC;
+
+-- Count events by type
+SELECT event_type, COUNT(*) 
+FROM events 
+GROUP BY event_type;
+
+-- Find NFT mints with metadata
+SELECT 
+  signature,
+  event_data->>'nft_mint' as nft_mint,
+  event_data->>'name' as name,
+  event_data->>'uri' as uri,
+  block_time
+FROM events 
+WHERE event_type = 'NftMintedEvent'
+ORDER BY block_time DESC;
+```
+
+## 🏗️ Architecture
+
+### Event Processing Flow
+
+```
+┌─────────────┐
+│   Solana    │
+│  Blockchain │
+└──────┬──────┘
+       │
+       ▼
+┌─────────────────────────────────────────┐
+│         RPC Client (pkg/solana)         │
+│  - GetSignaturesForAddress()            │
+│  - GetTransaction()                     │
+└──────┬──────────────────────────────────┘
+       │
+       ▼
+┌─────────────────────────────────────────┐
+│     Decoder (internal/decoder)          │
+│  - ParseProgramData() from logs         │
+│  - DecodeEvent() with discriminators    │
+└──────┬──────────────────────────────────┘
+       │
+       ▼
+┌─────────────────────────────────────────┐
+│   Event Processor (internal/processor)  │
+│  - ProcessEvent()                       │
+│  - Route to specific handlers           │
+└──────┬──────────────────────────────────┘
+       │
+       ▼
+┌─────────────────────────────────────────┐
+│   Repository (internal/repository)      │
+│  - SaveEvent()                          │
+│  - MongoDB or PostgreSQL                │
+└─────────────────────────────────────────┘
+```
+
+### Anchor Event Decoding
+
+Events are decoded using Anchor's discriminator system:
+
+1. Extract "Program data:" logs from transaction
+2. Base64 decode the data
+3. Read first 8 bytes as discriminator (SHA256 hash of "event:EventName")
+4. Match discriminator to event type
+5. Borsh deserialize remaining bytes into typed struct
+6. Store in database with metadata (signature, slot, timestamp)
+
+## 🔧 Development
 
 ### Running Tests
 
 ```bash
 # Run all tests
-make test
+go test ./...
 
-# Run tests with coverage
-make test-cover
+# Run with coverage
+go test -cover ./...
+
+# Run specific package
+go test ./internal/decoder/
+go test ./internal/processor/
 ```
 
 ### Code Quality
 
 ```bash
 # Format code
-make fmt
+gofmt -w .
 
 # Run linters
-make lint
+golangci-lint run
+
+# Check for issues
+go vet ./...
 ```
 
-### Installing Development Tools
+### Adding New Event Types
+
+1. Add event struct to `internal/models/events.go`
+2. Add event type constant
+3. Add discriminator to `internal/decoder/anchor_decoder.go`
+4. Implement decoder function
+5. Add handler in `internal/processor/event_processor.go`
+
+## 🐳 Docker Deployment
 
 ```bash
-make install-tools
+# Build image
+docker build -t go-indexer .
+
+# Run with Docker Compose
+docker-compose up -d
+
+# View logs
+docker-compose logs -f indexer
 ```
 
-## Architecture
+## 📈 Performance Tuning
 
-### Indexer Flow
+### Configuration Tips
 
-1. **Initialization**: Load configuration and initialize components
-2. **Block Processing**: Poll for new blocks at configured intervals
-3. **Concurrent Processing**: Process multiple blocks concurrently
-4. **Error Handling**: Retry failed operations with exponential backoff
-5. **Graceful Shutdown**: Handle shutdown signals and cleanup resources
+- **POLL_INTERVAL_MS**: Lower = more real-time, higher = less RPC calls
+- **BATCH_SIZE**: Higher = fewer RPC calls but more memory
+- **MAX_CONCURRENCY**: Match to your CPU cores (usually 4-8)
 
-### Concurrency Model
+### MongoDB Optimization
 
-- Uses goroutines for parallel block processing
-- Channel-based communication for coordination
-- Context-based cancellation for graceful shutdown
-- Mutex protection for shared state
+```javascript
+// Create compound indexes for common queries
+db.events.createIndex({ event_type: 1, block_time: -1 })
+db.events.createIndex({ "user": 1, block_time: -1 })
+db.events.createIndex({ program_id: 1, slot: -1 })
+```
 
-## Testing
+### PostgreSQL Optimization
 
-The project includes comprehensive tests:
+```sql
+-- Create indexes for common queries
+CREATE INDEX idx_events_type_time ON events(event_type, block_time DESC);
+CREATE INDEX idx_events_jsonb_user ON events USING GIN ((event_data->'user'));
+```
 
-- Unit tests for individual components
-- Integration tests for end-to-end flows
-- Table-driven tests for better coverage
-- Race condition detection with `-race` flag
+## 🔍 Monitoring
 
-## Performance Considerations
+### Health Check
 
-- Configurable batch size for optimal throughput
-- Connection pooling for database operations
-- Efficient memory usage with proper resource cleanup
-- Monitoring and profiling support with pprof
+```bash
+curl http://localhost:8080/health
+```
 
-## Contributing
+### Metrics (TODO)
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Run tests and linters
-5. Submit a pull request
+Future support for Prometheus metrics:
+- Events processed per second
+- RPC request latency
+- Database write latency
+- Event types distribution
 
-## License
+## 🐛 Troubleshooting
+
+### Common Issues
+
+**"Program data not found in logs"**
+- Check if transactions have events
+- Verify program ID is correct
+- Ensure you're indexing the right transactions
+
+**"Failed to decode event"**
+- Check IDL matches deployed program version
+- Verify discriminator calculation
+- Check Borsh serialization format
+
+**"Too many RPC requests"**
+- Increase POLL_INTERVAL_MS
+- Reduce BATCH_SIZE
+- Use rate-limited RPC endpoint
+
+**"Database connection failed"**
+- Verify DATABASE_URL is correct
+- Check database is running
+- Verify credentials
+
+## 📝 License
 
 MIT License - see LICENSE file for details
 
-## Support
+## 🤝 Contributing
 
-For issues and questions:
-- GitHub Issues: https://github.com/lugondev/go-indexer-solana-starter/issues
-- Documentation: [docs/](./docs/)
+Contributions welcome! Please:
+1. Fork the repository
+2. Create a feature branch
+3. Add tests for new functionality
+4. Submit a pull request
 
-## Roadmap
+## 📚 Resources
 
-- [ ] WebSocket support for real-time updates
-- [ ] Multiple database backends
-- [ ] Metrics and monitoring
-- [ ] REST API for querying indexed data
-- [ ] GraphQL support
-- [ ] Program-specific indexing
-- [ ] Token account tracking
+- [Starter Program Documentation](../starter_program/README.md)
+- [Anchor Framework](https://www.anchor-lang.com/)
+- [Solana RPC API](https://solana.com/docs/rpc)
+- [go-carbon Framework](https://github.com/lugondev/go-carbon)

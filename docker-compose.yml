@@ -9,10 +9,23 @@ services:
     ports:
       - "${SERVER_PORT:-8080}:8080"
     depends_on:
-      - postgres
+      - mongodb
     restart: unless-stopped
     networks:
       - indexer-network
+
+  mongodb:
+    image: mongo:7.0
+    container_name: solana-mongodb
+    environment:
+      MONGO_INITDB_DATABASE: solana_indexer
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb-data:/data/db
+    networks:
+      - indexer-network
+    restart: unless-stopped
 
   postgres:
     image: postgres:15-alpine
@@ -28,8 +41,11 @@ services:
     networks:
       - indexer-network
     restart: unless-stopped
+    profiles:
+      - postgres
 
 volumes:
+  mongodb-data:
   postgres-data:
 
 networks:

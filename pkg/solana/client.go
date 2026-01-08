@@ -3,39 +3,79 @@ package solana
 import (
 	"context"
 	"fmt"
+
+	"github.com/gagliardetto/solana-go"
+	"github.com/gagliardetto/solana-go/rpc"
 )
 
-// Client represents a Solana RPC client
 type Client struct {
-	rpcURL string
-	wsURL  string
+	rpc *rpc.Client
 }
 
-// NewClient creates a new Solana client
 func NewClient(rpcURL, wsURL string) (*Client, error) {
 	if rpcURL == "" {
 		return nil, fmt.Errorf("rpcURL cannot be empty")
 	}
 
+	client := rpc.New(rpcURL)
 	return &Client{
-		rpcURL: rpcURL,
-		wsURL:  wsURL,
+		rpc: client,
 	}, nil
 }
 
-// GetSlot retrieves the current slot
 func (c *Client) GetSlot(ctx context.Context) (uint64, error) {
-	// TODO: Implement actual RPC call
-	return 0, fmt.Errorf("not implemented")
+	slot, err := c.rpc.GetSlot(ctx, rpc.CommitmentConfirmed)
+	if err != nil {
+		return 0, fmt.Errorf("get slot: %w", err)
+	}
+	return slot, nil
 }
 
-// GetBlock retrieves a block by slot number
-func (c *Client) GetBlock(ctx context.Context, slot uint64) (*Block, error) {
-	// TODO: Implement actual RPC call
-	return nil, fmt.Errorf("not implemented")
+func (c *Client) GetTransaction(ctx context.Context, signature solana.Signature) (*rpc.GetTransactionResult, error) {
+	out, err := c.rpc.GetTransaction(
+		ctx,
+		signature,
+		&rpc.GetTransactionOpts{
+			Encoding:                       solana.EncodingBase64,
+			Commitment:                     rpc.CommitmentConfirmed,
+			MaxSupportedTransactionVersion: nil,
+		},
+	)
+	if err != nil {
+		return nil, fmt.Errorf("get transaction: %w", err)
+	}
+	return out, nil
 }
 
-// Block represents a Solana block
+func (c *Client) GetSignaturesForAddress(ctx context.Context, address solana.PublicKey, limit int, before, until *solana.Signature) ([]*rpc.TransactionSignature, error) {
+	opts := &rpc.GetSignaturesForAddressOpts{
+		Limit: &limit,
+	}
+	if before != nil {
+		opts.Before = *before
+	}
+	if until != nil {
+		opts.Until = *until
+	}
+
+	sigs, err := c.rpc.GetSignaturesForAddress(ctx, address)
+	if err != nil {
+		return nil, fmt.Errorf("get signatures for address: %w", err)
+	}
+	return sigs, nil
+}
+
+func (c *Client) GetBlockTime(ctx context.Context, slot uint64) (int64, error) {
+	blockTime, err := c.rpc.GetBlockTime(ctx, slot)
+	if err != nil {
+		return 0, fmt.Errorf("get block time: %w", err)
+	}
+	if blockTime == nil {
+		return 0, fmt.Errorf("block time is nil")
+	}
+	return blockTime.Time().Unix(), nil
+}
+
 type Block struct {
 	Slot              uint64
 	Blockhash         string
@@ -44,28 +84,24 @@ type Block struct {
 	Transactions      []Transaction
 }
 
-// Transaction represents a Solana transaction
 type Transaction struct {
 	Signature string
 	Message   Message
 	Meta      *TransactionMeta
 }
 
-// Message represents the transaction message
 type Message struct {
 	AccountKeys     []string
 	RecentBlockhash string
 	Instructions    []Instruction
 }
 
-// Instruction represents a transaction instruction
 type Instruction struct {
 	ProgramIDIndex int
 	Accounts       []int
 	Data           string
 }
 
-// TransactionMeta contains transaction metadata
 type TransactionMeta struct {
 	Err               error
 	Fee               uint64
@@ -75,8 +111,11 @@ type TransactionMeta struct {
 	LogMessages       []string
 }
 
-// InnerInstruction represents an inner instruction
 type InnerInstruction struct {
 	Index        int
 	Instructions []Instruction
+}
+
+func (c *Client) GetBlock(ctx context.Context, slot uint64) (*Block, error) {
+	return nil, fmt.Errorf("not implemented")
 }
