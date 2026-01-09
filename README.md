@@ -625,7 +625,23 @@ Contributions welcome! Please:
 
 ## 📚 Resources
 
-- [Starter Program Documentation](../starter_program/README.md)
-- [Anchor Framework](https://www.anchor-lang.com/)
-- [Solana RPC API](https://solana.com/docs/rpc)
-- [go-carbon Framework](https://github.com/lugondev/go-carbon)
+- [Root Project README](../README.md) - Full monorepo overview
+- [Starter Program Documentation](../starter_program/README.md) - Program instructions and API
+- [Frontend Documentation](../frontend/README.md) - UI components and hooks
+- [Cross-Program Invocation Guide](../starter_program/CROSS_PROGRAM.md) - CPI patterns
+- [Anchor Framework](https://www.anchor-lang.com/) - Solana program framework
+- [Solana RPC API](https://solana.com/docs/rpc) - RPC endpoint documentation
+- [MongoDB Documentation](https://www.mongodb.com/docs/) - MongoDB query language
+- [PostgreSQL Documentation](https://www.postgresql.org/docs/) - PostgreSQL SQL reference
+- [go-carbon Framework](https://github.com/lugondev/go-carbon) - Go application framework
+
+## 📋 Additional Documentation
+
+- **[QUICKSTART.md](./QUICKSTART.md)** - Quick start guide
+- **[IMPLEMENTATION_SUMMARY.md](./IMPLEMENTATION_SUMMARY.md)** - Implementation details
+- **[PROJECT_SUMMARY.md](./PROJECT_SUMMARY.md)** - Project overview
+- **[CHANGELOG.md](./CHANGELOG.md)** - Version history
+- **[CONTRIBUTING.md](./CONTRIBUTING.md)** - Contribution guidelines
+- **[docs/architecture.md](./docs/architecture.md)** - Architecture deep dive
+- **[docs/api.md](./docs/api.md)** - API documentation
+- **[docs/deployment.md](./docs/deployment.md)** - Deployment guide
